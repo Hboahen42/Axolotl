@@ -1,0 +1,12 @@
+# Test 2: Function definitions and function calls
+fun multiply(a, b) {
+    return a * b
+}
+
+fun calculate() {
+    let x = 10
+    let y = 20
+    return multiply(x, y + 5)
+}
+
+let total = calculate()

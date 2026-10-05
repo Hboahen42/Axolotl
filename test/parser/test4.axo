@@ -1,0 +1,9 @@
+# Test 4: While loops, state mutation, and nested blocks
+let count = 0
+let sum = 0
+
+while (count < 10) {
+    sum = sum + count
+    count = count + 1
+    print(sum)
+}

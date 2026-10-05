@@ -1,0 +1,8 @@
+# Test 5: Anonymous functions, expression statements, and strings
+fun (x, y) {
+    return x + y
+}
+
+print("Running test 5")
+10 + 20 * 3
+is_active == true
