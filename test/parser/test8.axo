@@ -1,0 +1,2 @@
+# Test 8: Syntax error - missing expression in variable declaration
+let x =

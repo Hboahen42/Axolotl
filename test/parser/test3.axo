@@ -1,0 +1,15 @@
+# Test 3: Conditionals and comparison operations
+let age = 18
+let is_adult = false
+
+if (age >= 18) {
+    is_adult = true
+    print("Eligible")
+} else {
+    is_adult = false
+    if (age == 0) {
+        print("Invalid age")
+    } else {
+        print("Minor")
+    }
+}

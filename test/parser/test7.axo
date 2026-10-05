@@ -1,0 +1,4 @@
+# Test 7: Syntax error - missing closing parenthesis in if condition
+if (x > 10 {
+    print("Error test")
+}
