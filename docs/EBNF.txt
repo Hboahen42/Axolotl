@@ -9,9 +9,6 @@
               | <return_statement>
               | <expression_statement>
 
-(* A statement that starts with <identifier> "=" is always an <assignment>,
-   never an <expression_statement> using the "=" comparison operator. *)
-
 <variable_declaration> ::= "let" <identifier> "=" <expression>
 
 <assignment> ::= <identifier> "=" <expression>
@@ -79,16 +76,12 @@
 
 <identifier> ::= <letter> { <letter> | <digit> | "_" }
 
-(* An <identifier> may not be a <keyword>. *)
-
 <keyword> ::= "let" | "if" | "else" | "while" | "fun"
             | "return" | "print" | "true" | "false"
 
 <comment> ::= "#" { any character except a newline }
 
 <whitespace> ::= " " | "\t" | "\r" | "\n"
-
-(* <whitespace> and <comment> may appear between any two tokens and are ignored. *)
 
 <letter> ::= "A" | "B" | ... | "Z"
            | "a" | "b" | ... | "z"
