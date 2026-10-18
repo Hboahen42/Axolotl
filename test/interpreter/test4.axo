@@ -1,0 +1,13 @@
+# Test 4: Scopes (environment / symbol table)
+let x = 1
+if (true) {
+    let x = 2       # new variable, shadows the outer x inside this block
+    print(x)        # 2
+}
+print(x)            # 1  (outer x untouched)
+
+let count = 0
+while (count < 3) {
+    count = count + 1    # assignment updates the outer variable
+}
+print(count)        # 3

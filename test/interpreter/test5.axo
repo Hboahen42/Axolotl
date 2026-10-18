@@ -1,0 +1,13 @@
+# Test 5: Functions, recursion and closures
+fun factorial(n) {
+    if (n <= 1) {
+        return 1
+    }
+    return n * factorial(n - 1)
+}
+print(factorial(5))
+
+fun make_greeting(name) {
+    return "Hello, " + name + "!"
+}
+print(make_greeting("Axolotl"))

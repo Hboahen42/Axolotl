@@ -1,0 +1,6 @@
+# Test 7: Runtime error - division by zero (inside a function, shows traceback)
+fun divide(a, b) {
+    return a / b
+}
+print(divide(10, 2))
+print(divide(1, 0))

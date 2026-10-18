@@ -1,0 +1,3 @@
+# Test 8: Runtime error - invalid operation
+let name = "Axolotl"
+print(name + 1)
