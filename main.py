@@ -2,32 +2,47 @@ import os
 import re
 import sys
 
+import interpreter.interpreter as interpreter
 import lexer.lexer as lexer
 import parser.parser as parser
 
 
-def run(fn, text):
-    print()
-    print('Tokens:')
+def run(fn, text, debug=False, context=None, show_result=False):
+    """Lex, parse and execute `text`. With `debug`, also print the tokens and AST."""
     tokens, error = lexer.run(fn, text)
     if error:
         print(error.as_string())
         return 1
 
-    print(tokens)
+    if debug:
+        print()
+        print('Tokens:')
+        print(tokens)
 
-    print()
-    print('AST:')
     res = parser.Parser(tokens).parse()
     if res.error:
         print(res.error.as_string())
         return 1
 
-    print(res.node)
+    if debug:
+        print()
+        print('AST:')
+        print(res.node)
+        print()
+        print('Output:')
+
+    value, error = interpreter.run(res.node, context)
+    if error:
+        print(error.as_string())
+        return 1
+
+    # In the REPL, echo the value of a bare expression like `1 + 2`
+    if show_result and value is not None and res.node.statements             and not isinstance(res.node.statements[-1], parser.FuncDefNode):
+        print(interpreter.to_display(value))
     return 0
 
 
-def run_file(path):
+def run_file(path, debug=False):
     try:
         with open(path, 'r', encoding='utf-8') as f:
             text = f.read()
@@ -35,12 +50,12 @@ def run_file(path):
         print(f'could not read {path}: {e}')
         return 1
 
-    return run(path, text)
+    return run(path, text, debug)
 
 
 def run_test_menu():
     try:
-        category_input = input('Which test would you like to run? (lexer / parser): ').strip().lower()
+        category_input = input('Which test would you like to run? (lexer / parser / interpreter): ').strip().lower()
     except (EOFError, KeyboardInterrupt):
         print()
         return
@@ -52,8 +67,10 @@ def run_test_menu():
         category = 'lexer'
     elif category_input in ('parser', 'parse', 'p', '2'):
         category = 'parser'
+    elif category_input in ('interpreter', 'interpret', 'i', '3'):
+        category = 'interpreter'
     else:
-        print("Invalid option. Please choose 'lexer' or 'parser'.")
+        print("Invalid option. Please choose 'lexer', 'parser' or 'interpreter'.")
         return
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -99,12 +116,16 @@ def run_test_menu():
 
     test_path = os.path.join(test_dir, target_file)
     print(f"\n--- Running {category} test: {target_file} ---")
-    run_file(test_path)
+    # lexer/parser tests are about the tokens and AST, so show them too
+    run_file(test_path, debug=category != 'interpreter')
     print()
 
 
 def run_repl():
-    print("Welcome to Axolotl 1.0 (type 'exit' to quit)")
+    print("Welcome to Axolotl 1.0 (type 'exit' to quit, 'debug' to toggle tokens/AST)")
+    # one context for the whole session, so variables survive between lines
+    context = interpreter.new_global_context()
+    debug = False
     while True:
         try:
             text = input('Axolotl > ')
@@ -117,18 +138,28 @@ def run_repl():
         if text.strip().lower() == 'test':
             run_test_menu()
             continue
+        if text.strip().lower() == 'debug':
+            debug = not debug
+            print(f"debug {'on' if debug else 'off'}")
+            continue
         if not text.strip():
             continue
 
-        run('<stdin>', text)
+        run('<stdin>', text, debug, context, show_result=True)
 
 
 def main():
-    if len(sys.argv) > 2:
-        print('usage: python main.py [file.axo]')
+    args = sys.argv[1:]
+    debug = False
+    if args and args[0] in ('-d', '--debug'):
+        debug = True
+        args = args[1:]
+
+    if len(args) > 1:
+        print('usage: python main.py [-d | --debug] [file.axo]')
         return 1
-    if len(sys.argv) == 2:
-        return run_file(sys.argv[1])
+    if len(args) == 1:
+        return run_file(args[0], debug)
     return run_repl()
 
 

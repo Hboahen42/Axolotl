@@ -31,9 +31,6 @@ TT_EOF = 'EOF'
 
 KEYWORD = [
     'let',
-    'and',
-    'or',
-    'not',
     'if',
     'else',
     'while',
@@ -204,7 +201,7 @@ class Lexer:
             num_str += '.'
             self.advance()
 
-            if self.current_char is not None and self.current_char not in DIGITS:
+            if self.current_char is None or self.current_char not in DIGITS:
                 return None, ExpectedCharError(pos_start, self.pos, "digit (after '.')")
 
             while self.current_char is not None and self.current_char in DIGITS:

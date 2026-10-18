@@ -9,6 +9,9 @@
               | <return_statement>
               | <expression_statement>
 
+(* A statement that starts with <identifier> "=" is always an <assignment>,
+   never an <expression_statement> using the "=" comparison operator. *)
+
 <variable_declaration> ::= "let" <identifier> "=" <expression>
 
 <assignment> ::= <identifier> "=" <expression>
@@ -20,7 +23,7 @@
 
 <while_statement> ::= "while" "(" <expression> ")" <block>
 
-<function_definition> ::= "fun" [<identifier>] "(" [ <parameters> ] ")"
+<function_definition> ::= "fun" <identifier> "(" [ <parameters> ] ")"
                           <block>
 
 <parameters> ::= <identifier> { "," <identifier> }
@@ -47,6 +50,7 @@
 
 <primary> ::= <number>
             | <boolean>
+            | <string>
             | <identifier>
             | <function-call>
             | "(" <expression> ")"
@@ -65,13 +69,29 @@
 
 <boolean> ::= "true" | "false"
 
-<number> ::= <digit> { <digit> }
+<number> ::= <digit> { <digit> } [ "." <digit> { <digit> } ]
 
-<identifier> ::= <letter> { <letter> | <digit> }
+<string> ::= '"' { <string-char> | <escape-sequence> } '"'
+
+<string-char> ::= any character except '"', "\" or a newline
+
+<escape-sequence> ::= "\" ( "n" | "t" | '"' | "\" )
+
+<identifier> ::= <letter> { <letter> | <digit> | "_" }
+
+(* An <identifier> may not be a <keyword>. *)
+
+<keyword> ::= "let" | "if" | "else" | "while" | "fun"
+            | "return" | "print" | "true" | "false"
+
+<comment> ::= "#" { any character except a newline }
+
+<whitespace> ::= " " | "\t" | "\r" | "\n"
+
+(* <whitespace> and <comment> may appear between any two tokens and are ignored. *)
 
 <letter> ::= "A" | "B" | ... | "Z"
            | "a" | "b" | ... | "z"
-           | "_"
 
 <digit> ::= "0" | "1" | "2" | "3" | "4"
           | "5" | "6" | "7" | "8" | "9"

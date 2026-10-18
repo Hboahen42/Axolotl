@@ -1,5 +1,5 @@
-# Test 5: Anonymous functions, expression statements, and strings
-fun (x, y) {
+# Test 5: functions, expression statements, and strings
+fun add(x, y) {
     return x + y
 }
 

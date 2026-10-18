@@ -71,7 +71,6 @@ class Parser:
         res = ParseResult()
         pos_start = self.current_tok.pos_start.copy()
         statements = []
-
         while self.current_tok.type != TT_EOF:
             statement = res.register(self.statement())
             if res.error: return res
@@ -213,20 +212,17 @@ class Parser:
 
         return res.success(WhileNode(condition, body, pos_start))
 
-    # <function_definition> ::= "fun" [<identifier>] "(" [ <parameters> ] ")"
+    # <function_definition> ::= "fun" <identifier> "(" [ <parameters> ] ")"
     #                           <block>
     def function_definition(self):
         res = ParseResult()
         pos_start = self.current_tok.pos_start.copy()
         self.advance()
 
-        var_name_tok = None
-        if self.current_tok.type == TT_IDENTIFIER:
-            var_name_tok = self.current_tok
-            self.advance()
+        var_name_tok = self.expect(res, TT_IDENTIFIER, "Expected a function name after 'fun'")
+        if not var_name_tok: return res
 
-        details = "Expected '('" if var_name_tok else "Expected an identifier or '('"
-        if not self.expect(res, TT_LPAREN, details): return res
+        if not self.expect(res, TT_LPAREN, "Expected '('"): return res
 
         param_name_tok = []
         if self.current_tok.type == TT_IDENTIFIER:
@@ -301,7 +297,7 @@ class Parser:
 
         return res.success(left)
 
-    # <factor> ::= <unary> { ("*" | "/") <unary> }
+    # <factor> ::= <unary> { ("*" | "/" | "%") <unary> }
     def factor(self):
         res = ParseResult()
 
@@ -354,6 +350,7 @@ class Parser:
 
     # <primary> ::= <number>
     #             | <boolean>
+    #             | <string>
     #             | <identifier>
     #             | <function-call>
     #             | "(" <expression> ")"
@@ -389,7 +386,7 @@ class Parser:
 
             return res.success(expr)
 
-        return self.error(res, "Expected a number, 'true', 'false', an identifier, '-', or '('")
+        return self.error(res, "Expected a number, a string, 'true', 'false', an identifier, '-', or '('")
 
     # <function-call> ::= <identifier> "(" [ <arguments> ] ")"
     # <arguments> ::= <expression> { "," <expression> }
@@ -411,12 +408,3 @@ class Parser:
         if not self.expect(res, TT_RPAREN, "Expected ')'"): return res
 
         return res.success(CallNode(var_name_tok, arg_node, pos_end))
-
-def run(fn, text):
-    import lexer.lexer as lexer
-
-    tokens, error = lexer.run(fn, text)
-    if error: return None, error
-
-    res = Parser(tokens).parse()
-    return res.node, res.error
