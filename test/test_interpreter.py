@@ -131,6 +131,33 @@ class InterpreterTests(unittest.TestCase):
         self.assertIn('in <program>', text)
         self.assertIn('in divide', text)
 
+    def test_function_with_three_parameters(self):
+        self.assertPrints(
+            'fun add(a, b, c) { return a + b + c } print(add(10, 20, 30))',
+            '60'
+        )
+    def test_function_called_multiple_times(self):
+        self.assertPrints(
+            'fun square(n) { return n * n } print(square(3)) print(square(5))',
+            '9', '25'
+        )
 
+    def test_early_return(self):
+        self.assertPrints(
+            'fun check(n) { if (n > 0) { return 1 } return 0 } print(check(5))',
+            '1'
+        )
+
+    def test_nested_function_calls(self):
+        self.assertPrints(
+            'fun double(n) { return n * 2 } print(double(double(3)))',
+            '12'
+        )
+
+    def test_local_variable_isolation(self):
+        self.assertPrints(
+            'let x = 100 fun f() { let x = 50 return x } print(f()) print(x)',
+            '50', '100'
+        )
 if __name__ == '__main__':
     unittest.main()
