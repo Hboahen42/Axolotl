@@ -3,6 +3,7 @@
 ##########################################
 
 class ProgramNode:
+    """<program> ::= { <statement> }"""
     def __init__(self, statements, pos_start, pos_end):
         self.statements = statements
 
@@ -13,6 +14,7 @@ class ProgramNode:
         return '(program ' + ' '.join(repr(stmt) for stmt in self.statements) + ')'
 
 class BlockNode:
+    """<block> ::= "{" { <statement> } "}" """
     def __init__(self, statements, pos_start, pos_end):
         self.statements = statements
 
@@ -23,7 +25,7 @@ class BlockNode:
         return '(block ' + ' '.join(repr(stmt) for stmt in self.statements) + ')'
 
 class VarDeclarationNode:
-    """<var_declaration> ::= "let" <identifier> "=" <expression>"""
+    """<variable_declaration> ::= "let" <identifier> "=" <expression>"""
     def __init__(self, var_name_tok, value_node):
         self.var_name_tok = var_name_tok
         self.value_node = value_node
@@ -35,7 +37,7 @@ class VarDeclarationNode:
         return f'(let {self.var_name_tok.value} = {self.value_node})'
 
 class AssignmentNode:
-    """<assignment_statement> ::= <identifier> "=" <expression>"""
+    """<assignment> ::= <identifier> "=" <expression>"""
     def __init__(self, var_name_tok, value_node):
         self.var_name_tok = var_name_tok
         self.value_node = value_node
@@ -85,8 +87,22 @@ class WhileNode:
     def __repr__(self) -> str:
         return f'(while {self.condition_node} {self.body_node})'
 
+class ForNode:
+    """<for_statement> ::= "for" "(" (<variable_declaration> | <assignment>) ";" <expression> ";" <assignment> ")" <block>"""
+    def __init__(self, init_node, condition_node, increment_node, body_node, pos_start):
+        self.init_node = init_node
+        self.condition_node = condition_node
+        self.increment_node = increment_node
+        self.body_node = body_node
+
+        self.pos_start = pos_start
+        self.pos_end = self.body_node.pos_end
+
+    def __repr__(self) -> str:
+        return f'(for {self.init_node} {self.condition_node} {self.increment_node} {self.body_node})'
+
 class FuncDefNode:
-    """<function_definition> ::= "fun" [<identifier>] "(" [ <parameters> ] ")"
+    """<function_definition> ::= "fun" <identifier> "(" [ <parameters> ] ")"
                             <block>"""
     def __init__(self, var_name_tok, params_name_toks, body_node, pos_start):
         self.var_name_tok = var_name_tok
@@ -97,9 +113,8 @@ class FuncDefNode:
         self.pos_end = self.body_node.pos_end
 
     def __repr__(self) -> str:
-        name = self.var_name_tok.value if self.var_name_tok else '<anonymous>'
         params = ', '.join(tok.value for tok in self.params_name_toks)
-        return f'(fun {name}({params}) {self.body_node})'
+        return f'(fun {self.var_name_tok.value}({params}) {self.body_node})'
 
 class ReturnNode:
     """<return_statement> ::= "return" <expression>"""
@@ -113,6 +128,11 @@ class ReturnNode:
         return f'(return {self.expr_node})'
 
 class BinOpNode:
+    """A binary operation, used by these rules:
+    <comparison> ::= <term> <comparison-operator> <term>
+    <term>       ::= <factor> { ("+" | "-") <factor> }
+    <factor>     ::= <unary> { ("*" | "/" | "%") <unary> }
+    <power>      ::= <primary> "^" <unary>"""
     def __init__(self, left_node, op_tok, right_node):
         self.left_node = left_node
         self.op_tok = op_tok
@@ -125,6 +145,7 @@ class BinOpNode:
         return f'({self.left_node} {self.op_tok} {self.right_node})'
 
 class UnaryOpNode:
+    """<unary> ::= "-" <primary>"""
     def __init__(self, op_tok, node):
         self.op_tok = op_tok
         self.node = node
@@ -136,6 +157,7 @@ class UnaryOpNode:
         return f'({self.op_tok} {self.node})'
 
 class NumberNode:
+    """<number> ::= <digit> { <digit> } [ "." <digit> { <digit> } ]"""
     def __init__(self, tok):
         self.tok = tok
 
@@ -146,6 +168,7 @@ class NumberNode:
         return f'{self.tok.value}'
 
 class BooleanNode:
+    """<boolean> ::= "true" | "false" """
     def __init__(self, tok):
         self.tok = tok
 
@@ -156,6 +179,7 @@ class BooleanNode:
         return f'{self.tok.value}'
 
 class StringNode:
+    """<string> ::= '"' { <string-char> | <escape-sequence> } '"'"""
     def __init__(self, tok):
         self.tok = tok
 
@@ -166,6 +190,7 @@ class StringNode:
         return f'{self.tok.value!r}'
 
 class VarAccessNode:
+    """<primary> ::= <identifier>   (reading a variable's value)"""
     def __init__(self, var_name_tok):
         self.var_name_tok = var_name_tok
 

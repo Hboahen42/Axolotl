@@ -21,6 +21,7 @@ TT_RPAREN = 'RPAREN'
 TT_LCURLY = 'LCURLY'
 TT_RCURLY = 'RCURLY'
 TT_COMMA = 'COMMA'
+TT_SEMI = 'SEMI'
 TT_EE = 'EE'
 TT_NE = 'NE'
 TT_LT = 'LT'
@@ -34,6 +35,7 @@ KEYWORD = [
     'if',
     'else',
     'while',
+    'for',
     'fun',
     'return',
     'print',
@@ -163,6 +165,9 @@ class Lexer:
                 self.advance()
             elif self.current_char == ',':
                 tokens.append(Token(TT_COMMA, pos_start=self.pos))
+                self.advance()
+            elif self.current_char == ';':
+                tokens.append(Token(TT_SEMI, pos_start=self.pos))
                 self.advance()
             elif self.current_char == '!':
                 tok, error = self.make_not_equals()
