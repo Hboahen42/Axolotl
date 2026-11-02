@@ -102,6 +102,7 @@ class Parser:
     #               | <print_statement>
     #               | <if_statement>
     #               | <while_statement>
+    #               | <for_statement>
     #               | <function_definition>
     #               | <return_statement>
     #               | <expression_statement>
@@ -116,6 +117,8 @@ class Parser:
             return self.if_statement()
         if tok.matches(TT_KEYWORD, 'while'):
             return self.while_statement()
+        if tok.matches(TT_KEYWORD, 'for'):
+            return self.for_statement()
         if tok.matches(TT_KEYWORD, 'fun'):
             return self.function_definition()
         if tok.matches(TT_KEYWORD, 'return'):
@@ -198,7 +201,7 @@ class Parser:
     def while_statement(self):
         res = ParseResult()
         pos_start = self.current_tok.pos_start.copy()
-        self.advance()
+        self.advance() # while
 
         if not self.expect(res, TT_LPAREN, "Expected '(' after 'while'"): return res
 
@@ -211,6 +214,49 @@ class Parser:
         if res.error: return res
 
         return res.success(WhileNode(condition, body, pos_start))
+
+    # <for_statement> ::= "for" "(" (<variable_declaration> | <assignment>) ";" <expression> ";" <assignment> ")" <block>
+    def for_statement(self):
+        res = ParseResult()
+        pos_start = self.current_tok.pos_start.copy()
+        self.advance() # for
+
+        if not self.expect(res, TT_LPAREN, "Expected '(' after 'for'"): return res
+
+        if self.current_tok.matches(TT_KEYWORD, 'let'):
+            init = res.register(self.variable_declaration())
+        elif self.is_assignment_start():
+            init = res.register(self.assignment())
+        else:
+            return self.error(res, "Expected 'let' or an assignment at the start of for loop initialization")
+        if res.error: return res
+
+        if not self.expect(res, TT_SEMI, "Expected ';' after for loop initialization"): return res
+
+        condition = res.register(self.expression())
+        if res.error: return res
+
+        if not self.expect(res, TT_SEMI, "Expected ';' after for loop condition"): return res
+
+        if not self.is_assignment_start():
+            if self.current_tok.type == TT_IDENTIFIER:
+                # e.g. 'i + 1' instead of 'i = i + 1'
+                name = self.current_tok.value
+                return self.error(res, f"Expected an assignment for the for loop increment (did you mean '{name} = {name} + 1'?)")
+            return self.error(res, "Expected an assignment for the for loop increment")
+        increment = res.register(self.assignment())
+        if res.error: return res
+
+        if not self.expect(res, TT_RPAREN, "Expected ')' after for loop increment"): return res
+
+        body = res.register(self.block())
+        if res.error: return res
+
+        return res.success(ForNode(init, condition, increment, body, pos_start))
+
+    # returns True if the next tokens are '<identifier> ='
+    def is_assignment_start(self):
+        return self.current_tok.type == TT_IDENTIFIER and self.peek().type == TT_EQ
 
     # <function_definition> ::= "fun" <identifier> "(" [ <parameters> ] ")"
     #                           <block>
@@ -243,10 +289,15 @@ class Parser:
         return res.success(FuncDefNode(var_name_tok, param_name_tok, body,pos_start))
 
     # <return_statement> ::= "return" <expression>
+    # A bare 'return' is not allowed; a function that should give nothing
+    # simply ends without 'return' (and its call gives null).
     def return_statement(self):
         res = ParseResult()
         pos_start = self.current_tok.pos_start.copy()
         self.advance()
+
+        if self.current_tok.type in (TT_RCURLY, TT_EOF):
+            return self.error(res, "Expected a value after 'return' (to return nothing, end the function without 'return')")
 
         expr = res.register(self.expression())
         if res.error: return res
@@ -263,18 +314,25 @@ class Parser:
 
     # <comparison> ::= <term>
     #                | <term> <comparison-operator> <term>
+    # Only one comparison is allowed per expression, so 'a < b < c' is a syntax error.
     def comparison(self):
         res = ParseResult()
+        comparison_ops = (TT_EQ, TT_EE, TT_NE, TT_LT, TT_GT, TT_LTE, TT_GTE)
 
         left = res.register(self.term())
         if res.error: return res
 
-        if self.current_tok.type in (TT_EQ, TT_EE, TT_NE, TT_LT, TT_GT, TT_LTE, TT_GTE):
+        if self.current_tok.type in comparison_ops:
             op_tok = self.current_tok
             self.advance()
 
             right = res.register(self.term())
             if res.error: return res
+
+            if self.current_tok.type in comparison_ops:
+                return self.error(res, "Comparisons cannot be chained (e.g. 'a < b < c'); "
+                                       "use parentheses to compare one pair at a time, e.g. '(a < b) == true'")
+
             return res.success(BinOpNode(left, op_tok, right))
 
         return res.success(left)
@@ -315,7 +373,7 @@ class Parser:
 
         return res.success(left)
 
-    # <unary> ::= [ "-" ] <primary>
+    # <unary> ::= "-" <primary>
     #             | <power>
     def unary(self):
         res = ParseResult()
@@ -323,6 +381,9 @@ class Parser:
         if self.current_tok.type == TT_MINUS:
             op_tok = self.current_tok
             self.advance()
+
+            if self.current_tok.type == TT_MINUS:
+                return self.error(res, "Cannot use '-' twice in a row; use parentheses instead, e.g. '-(-5)'")
 
             primary = res.register(self.primary())
             if res.error: return res
@@ -354,6 +415,8 @@ class Parser:
     #             | <identifier>
     #             | <function-call>
     #             | "(" <expression> ")"
+    # <identifier> and <function-call> both start with a name; the parser looks
+    # at the next token to decide: '(' means a function call, anything else a variable.
     def primary(self):
         res = ParseResult()
         tok = self.current_tok
