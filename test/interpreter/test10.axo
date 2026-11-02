@@ -1,0 +1,49 @@
+# Test 10: Global vs local scope
+let x = 10
+fun test() {
+    let x = 20       # local x, shadows the global x
+    print(x)         # 20
+}
+test()
+print(x)             # 10 (global x untouched)
+
+# parameters are local to the function
+let n = 1
+fun show(n) {
+    print(n)         # 99
+}
+show(99)
+print(n)             # 1
+
+# functions can read global variables
+let tax_rate = 2
+fun with_tax(price) {
+    return price * tax_rate
+}
+print(with_tax(50))  # 100
+
+# assignment without 'let' updates the global variable
+let counter = 0
+fun increment() {
+    counter = counter + 1
+}
+increment()
+increment()
+increment()
+print(counter)       # 3
+
+# each call gets its own fresh local scope
+fun make_local(v) {
+    let temp = v * 10
+    return temp
+}
+print(make_local(1)) # 10
+print(make_local(2)) # 20
+
+# local variables do not exist outside the function
+fun secret() {
+    let hidden = 42
+    return hidden
+}
+print(secret())      # 42
+print(hidden)        # Runtime Error: 'hidden' is not defined

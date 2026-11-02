@@ -1,0 +1,63 @@
+# Test 13: For loops combined with functions
+# a for loop inside a function, using a parameter as the limit
+fun sum_to(n) {
+    let total = 0
+    for (let i = 1; i <= n; i = i + 1) {
+        total = total + i
+    }
+    return total
+}
+print(sum_to(10))                # 55
+print("")
+
+# factorial with a loop
+fun factorial(n) {
+    let result = 1
+    for (let i = 2; i <= n; i = i + 1) {
+        result = result * i
+    }
+    return result
+}
+print(factorial(5))              # 120
+print("")
+
+# returning early from inside a loop ends both the loop and the function
+fun first_square_over(limit) {
+    for (let n = 1; n < 100; n = n + 1) {
+        if (n * n > limit) {
+            return n
+        }
+    }
+    return -1
+}
+print(first_square_over(50))     # 8
+print("")
+
+# calling a function in the loop body
+fun square(v) {
+    return v * v
+}
+for (let i = 1; i <= 4; i = i + 1) {
+    print(square(i))             # 1 4 9 16
+}
+print("")
+
+# calling a function in the loop condition
+fun limit() {
+    return 3
+}
+for (let i = 0; i < limit(); i = i + 1) {
+    print("call " + "number")    # printed 3 times
+}
+print("")
+
+# the loop variable inside a function does not affect a global of the same name
+let i = 500
+fun loop_inside() {
+    for (let i = 0; i < 2; i = i + 1) {
+        print(i)                 # 0 1
+    }
+}
+loop_inside()
+print(i)                         # 500
+print("")

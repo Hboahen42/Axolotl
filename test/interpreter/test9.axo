@@ -1,0 +1,46 @@
+# Test 9: Function definitions, parameters, calls and return values
+fun add(a, b) {
+    return a + b
+}
+let result = add(10, 20)
+print(result)                    # 30
+
+# no parameters
+fun greet() {
+    return "Hello from Axolotl"
+}
+print(greet())                   # Hello from Axolotl
+
+# several parameters and local variables
+fun average(a, b, c) {
+    let total = a + b + c
+    let count = 3
+    return total / count
+}
+print(average(4, 5, 9))          # 6
+
+# the return value can be used inside a larger expression
+print(add(2, 3) * add(1, 1))     # 10
+
+# a function call as an argument
+print(add(add(1, 2), add(3, 4))) # 10
+
+# early return: the code after 'return' does not run
+fun sign(n) {
+    if (n < 0) {
+        return "negative"
+    }
+    if (n == 0) {
+        return "zero"
+    }
+    return "positive"
+}
+print(sign(-7))                  # negative
+print(sign(0))                   # zero
+print(sign(42))                  # positive
+
+# a function with no 'return' gives null
+fun no_return(n) {
+    let doubled = n * 2
+}
+print(no_return(5))              # null

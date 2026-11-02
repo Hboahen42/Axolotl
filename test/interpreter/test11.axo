@@ -1,0 +1,55 @@
+# Test 11: For loops (extension feature)
+print("Loop 1")
+for (let i = 0; i < 5; i = i + 1) {
+    print(i)                     # 0 1 2 3 4
+}
+print("")
+
+print("Loop 2")
+# sum of 1..100 (same result as the while loop in test 3)
+let sum = 0
+for (let i = 1; i <= 100; i = i + 1) {
+    sum = sum + i
+}
+print(sum)                       # 5050
+print("")
+
+print("Loop 3")
+# counting down
+for (let i = 3; i > 0; i = i - 1) {
+    print(i)                     # 3 2 1
+}
+print("")
+
+print("Loop 4")
+# stepping by 2
+for (let i = 0; i <= 10; i = i + 5) {
+    print(i)                     # 0 5 10
+}
+print("")
+
+print("Loop 5")
+# condition false from the start: the body never runs
+for (let i = 10; i < 5; i = i + 1) {
+    print("never printed")
+}
+print("")
+
+print("Loop 6")
+# nested loops
+for (let row = 1; row <= 2; row = row + 1) {
+    for (let col = 1; col <= 3; col = col + 1) {
+        print(row * col)         # 1 2 3 2 4 6
+    }
+}
+print("")
+
+print("Loop 7")
+# loop with if/else inside
+for (let i = 1; i <= 4; i = i + 1) {
+    if (i % 2 == 0) {
+        print("even")
+    } else {
+        print("odd")
+    }
+}

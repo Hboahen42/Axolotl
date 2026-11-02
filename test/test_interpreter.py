@@ -159,5 +159,68 @@ class InterpreterTests(unittest.TestCase):
             'let x = 100 fun f() { let x = 50 return x } print(f()) print(x)',
             '50', '100'
         )
+
+    # --- for loops (extension feature) ---
+
+    def assertSyntaxError(self, source, message):
+        tokens, error = lexer.run('<test>', source)
+        self.assertIsNone(error, error and error.as_string())
+        res = parser.Parser(tokens).parse()
+        self.assertIsNotNone(res.error, 'expected a syntax error')
+        self.assertIn(message, res.error.details)
+
+    def test_for_loop_basic(self):
+        self.assertPrints('for (let i = 0; i < 3; i = i + 1) { print(i) }', '0', '1', '2')
+        self.assertPrints('let s = 0 for (let i = 1; i <= 100; i = i + 1) { s = s + i } print(s)', '5050')
+        self.assertPrints('for (let i = 3; i > 0; i = i - 1) { print(i) }', '3', '2', '1')
+        self.assertPrints('for (let i = 0; i <= 10; i = i + 5) { print(i) }', '0', '5', '10')
+
+    def test_for_loop_body_never_runs(self):
+        self.assertPrints('for (let i = 10; i < 5; i = i + 1) { print(i) }')
+
+    def test_for_loop_nested(self):
+        self.assertPrints(
+            'for (let r = 1; r <= 2; r = r + 1) { for (let c = 1; c <= 2; c = c + 1) { print(r * c) } }',
+            '1', '2', '2', '4'
+        )
+
+    def test_for_loop_variable_is_scoped_to_loop(self):
+        self.assertRuntimeError('for (let i = 0; i < 1; i = i + 1) { } print(i)', "'i' is not defined")
+        self.assertPrints('let x = 99 for (let x = 0; x < 2; x = x + 1) { print(x) } print(x)', '0', '1', '99')
+
+    def test_for_loop_body_variables_do_not_leak(self):
+        self.assertRuntimeError('for (let i = 0; i < 1; i = i + 1) { let inside = 1 } print(inside)',
+                                "'inside' is not defined")
+
+    def test_for_loop_with_existing_variable(self):
+        # without 'let' the loop reuses the outer variable, which keeps its final value
+        self.assertPrints('let j = 0 for (j = 0; j < 3; j = j + 1) { } print(j)', '3')
+
+    def test_for_loop_inside_function(self):
+        self.assertPrints(
+            'fun fact(n) { let r = 1 for (let i = 2; i <= n; i = i + 1) { r = r * i } return r } print(fact(5))',
+            '120'
+        )
+        # 'return' inside the loop ends both the loop and the function
+        self.assertPrints(
+            'fun first(limit) { for (let n = 1; n < 100; n = n + 1) { if (n * n > limit) { return n } } return -1 } '
+            'print(first(50))',
+            '8'
+        )
+
+    def test_for_loop_runtime_errors(self):
+        self.assertRuntimeError('for (let i = 0; 5; i = i + 1) { }', "'for' condition must be a boolean, got number")
+        self.assertRuntimeError('for (k = 0; k < 3; k = k + 1) { }', "Cannot assign to undefined variable 'k'")
+
+    def test_for_loop_syntax_errors(self):
+        self.assertSyntaxError('for let i = 0; i < 3; i = i + 1) { }', "Expected '(' after 'for'")
+        self.assertSyntaxError('for (5; true; i = 1) { }', "Expected 'let' or an assignment")
+        self.assertSyntaxError('for (let i = 0 i < 3; i = i + 1) { }', "Expected ';' after for loop initialization")
+        self.assertSyntaxError('for (let i = 0; i < 3 i = i + 1) { }', "Expected ';' after for loop condition")
+        self.assertSyntaxError('for (let i = 0; i < 3; i + 1) { }', "did you mean 'i = i + 1'?")
+        self.assertSyntaxError('for (let i = 0; i < 3; 7) { }', 'Expected an assignment for the for loop increment')
+        self.assertSyntaxError('for (let i = 0; i < 3; i = i + 1 { }', "Expected ')' after for loop increment")
+
+
 if __name__ == '__main__':
     unittest.main()

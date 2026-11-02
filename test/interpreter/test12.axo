@@ -1,0 +1,33 @@
+# Test 12: For loop scope
+# a variable declared with 'let' in the loop header only exists inside the loop
+let x = 99
+for (let x = 0; x < 2; x = x + 1) {
+    print(x)                     # 0 1
+}
+print(x)                         # 99 (outer x untouched)
+print("")
+
+# a 'let' inside the body is a new variable each time round
+let total = 0
+for (let i = 1; i <= 3; i = i + 1) {
+    let doubled = i * 2
+    total = total + doubled      # updates the outer total
+}
+print(total)                     # 12
+print("")
+
+# initializing with an existing variable (no 'let') reuses the outer variable,
+# so it keeps its final value after the loop
+let j = 0
+for (j = 0; j < 4; j = j + 1) {
+    print(j)                     # 0 1 2 3
+}
+print(j)                         # 4
+print("")
+
+# neither the loop variable nor body variables exist after the loop
+for (let k = 0; k < 1; k = k + 1) {
+    let inside = "only in the loop"
+    print(inside)                # only in the loop
+}
+print(k)                         # Runtime Error: 'k' is not defined

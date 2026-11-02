@@ -5,6 +5,7 @@
               | <print_statement>
               | <if_statement>
               | <while_statement>
+              | <for_statement>
               | <function_definition>
               | <return_statement>
               | <expression_statement>
@@ -20,11 +21,15 @@
 
 <while_statement> ::= "while" "(" <expression> ")" <block>
 
+<for_statement> ::= "for" "(" ( <variable_declaration> | <assignment> ) ";"
+                    <expression> ";" <assignment> ")" <block>
+
 <function_definition> ::= "fun" <identifier> "(" [ <parameters> ] ")"
                           <block>
 
 <parameters> ::= <identifier> { "," <identifier> }
 
+(* "return" must always be followed by a value; a bare "return" is not allowed. *)
 <return_statement> ::= "return" <expression>
 
 <expression_statement> ::= <expression>
@@ -33,6 +38,7 @@
 
 <expression> ::= <comparison>
 
+(* Only one comparison per expression: "a < b < c" is not allowed. *)
 <comparison> ::= <term>
                | <term> <comparison-operator> <term>
 
@@ -40,11 +46,14 @@
 
 <factor> ::= <unary> { ("*" | "/" | "%") <unary> }
 
-<unary> ::= [ "-" ] <primary>
+(* At most one "-" in a row: "--5" is not allowed, "-(-5)" is. *)
+<unary> ::= "-" <primary>
             | <power>
 
 <power> ::= <primary> [ "^" <unary> ]
 
+(* <identifier> and <function-call> both start with a name: a name followed
+   by "(" is a function call, otherwise it is a variable. *)
 <primary> ::= <number>
             | <boolean>
             | <string>
@@ -76,7 +85,7 @@
 
 <identifier> ::= <letter> { <letter> | <digit> | "_" }
 
-<keyword> ::= "let" | "if" | "else" | "while" | "fun"
+<keyword> ::= "let" | "if" | "else" | "while" | "for" | "fun"
             | "return" | "print" | "true" | "false"
 
 <comment> ::= "#" { any character except a newline }

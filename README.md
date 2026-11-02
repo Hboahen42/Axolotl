@@ -85,13 +85,127 @@ Axolotl supports:
 - **Variables & Assignment**: Variable declarations (`let x = 5`) and reassignments (`x = 10`).
 - **Operators**:
   - Arithmetic: `+`, `-`, `*`, `/`, `^` (right-associative power), `%`
-  - Comparison: `==`, `!=`, `<`, `>`, `<=`, `>=`
+  - Comparison: `==`, `!=`, `<`, `>`, `<=`, `>=` (a single `=` inside an expression is also treated as `==`). Only one comparison is allowed per expression: `1 < 2 < 3` is a syntax error, so compare one pair at a time and use parentheses to combine results, e.g. `(1 < 2) == true`.
+  - Negation: a single `-` before a value (`-5`, `-x`, `-(2 + 3)`). Two in a row (`--5`) is a syntax error; write `-(-5)` instead.
 - **Control Flow**:
   - Conditional blocks: `if (condition) { ... } else { ... }`
-  - Loops: `while (condition) { ... }`
+  - Loops: `while (condition) { ... }` and `for (let i = 0; i < 5; i = i + 1) { ... }`
 - **Functions**: Function declarations (`fun add(a, b) { return a + b }`) and calls (`add(1, 2)`).
 - **Built-in Statements**: `print(expr)` and `return expr`.
 - **Comments**: Line comments starting with `#`.
+
+### Functions
+
+Functions are declared with `fun`, take zero or more parameters, and return a value with `return`. A function that ends without `return` gives `null`. `return` must always be followed by a value: a bare `return` is a syntax error, so a function that should give nothing simply ends without `return`. Statements are not ended with `;` in Axolotl.
+
+A name followed by `(` is a function call (`add(1, 2)`); a name on its own is a variable (`add`). The parser tells them apart by looking at the token after the name.
+
+```
+fun add(a, b) {
+    return a + b
+}
+let result = add(10, 20)
+print(result)        # 30
+```
+
+- **Definition**: `visit_FuncDefNode` creates a `Function` object (name, parameter names, body, and the symbol table it was defined in) and stores it under its name in the current scope.
+- **Calls**: `visit_CallNode` looks the name up, checks it is a function and that the number of arguments matches, evaluates the arguments, and runs the body in a new scope that holds the parameters.
+- **Return values**: `return` raises a `ReturnSignal` exception carrying the value; `visit_CallNode` catches it and uses the value as the result of the call. This lets `return` exit from anywhere in the body, including inside loops and `if` blocks.
+- **Recursion** works because a function's name is defined before its body runs. The depth is capped at 500 calls, after which a runtime error is reported.
+
+### Scope
+
+Scope is a chain of `SymbolTable` objects (see [Environment / Symbol Table](#environment--symbol-table) below). The global table is created when the program starts. Each function call gets a new local table whose parent is the table the function was defined in, so:
+
+```
+let x = 10
+fun test() {
+    let x = 20       # stored in test's local table
+    print(x)         # 20, found in the local table first
+}
+test()
+print(x)             # 10, the global table was never changed
+```
+
+- `let` inside a function always creates a local variable, even if a global variable has the same name.
+- Reading a name searches the local table first, then the outer tables up to the global table.
+- `x = ...` without `let` updates the nearest existing `x`, so a function can change a global variable on purpose.
+- Parameters and local variables disappear when the call ends.
+
+### Extension Feature: `for` Loops
+
+```
+for (let i = 0; i < 5; i = i + 1) {
+    print(i)
+}
+```
+
+A `for` loop has three parts in its header, separated by `;`:
+
+1. **Initialization**: a `let` declaration or an assignment, run once before the loop.
+2. **Condition**: an expression that must be a boolean, checked before each pass.
+3. **Increment**: an assignment, run after each pass.
+
+How it was added:
+
+- **Lexer**: `for` is a keyword, and `;` is a new `SEMI` token.
+- **Parser**: `for_statement()` parses the header and body into a `ForNode` (`parser/ast.py`). It reports clear syntax errors, e.g. `for (let i = 0; i < 5; i + 1)` gives *Expected an assignment for the for loop increment (did you mean 'i = i + 1'?)*.
+- **Interpreter**: `visit_ForNode` creates a new **loop scope**, runs the initialization in it, then repeats: check the condition, run the body, run the increment.
+
+Loop scope:
+
+- A variable declared with `let` in the header lives in the loop scope, so it does not exist after the loop and does not change an outer variable with the same name.
+- The body is a block, so it gets its own fresh scope on every pass.
+- The increment runs in the loop scope, so it updates the loop variable.
+- If the initialization is an assignment (`for (i = 0; ...)`), the existing outer `i` is used and keeps its final value after the loop.
+
+### Other Supported Features from the Extension List
+
+`for` loops are our main extension. However, Axolotl also supports these other features from the assignment's list of extension options:
+
+**Recursion.** A function can call itself, because its name is stored in the scope before the body runs. Each call gets its own local scope, so every level of recursion has its own copy of the parameters. Calls more than 500 deep stop with a *Maximum recursion depth* runtime error instead of crashing Python.
+
+```
+fun fib(n) {
+    if (n < 2) {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+print(fib(10))               # 55
+```
+
+**Strings.**
+- String literals in double quotes, with the escape sequences `\n`, `\t`, `\"` and `\\`
+- Joining strings with `+`: `"Hello, " + name`
+- Repeating a string with `*` and a whole number: `"ab" * 3` → `ababab`
+- Comparing strings with `==`, `!=`, `<`, `>`, `<=`, `>=`, where `<` and `>` compare alphabetically: `"apple" < "banana"` → `true`
+- Clear errors for mixing types (`"a" + 1` → *Invalid operation: string + number*), invalid escape characters, and strings that are never closed
+
+**Comments.** Everything from `#` to the end of the line is ignored by the lexer:
+
+```
+let x = 10    # this is a comment
+```
+
+**Additional data types.** Besides integers, Axolotl has:
+- **floats** (`3.14`)
+- **booleans** (`true`, `false`), which `if`, `while` and `for` conditions must be
+- **`null`**, returned by a function that ends without `return`
+
+Values of different types are never equal (`1 == "1"` → `false`, `true == 1` → `false`).
+
+### New Tests
+
+| File | What it tests |
+|---|---|
+| `test/interpreter/test9.axo` | Function definitions, parameters, calls, return values, early return, `null` result |
+| `test/interpreter/test10.axo` | Global vs local scope, parameters, updating globals, local variables not visible outside (ends with an expected error) |
+| `test/interpreter/test11.axo` | Basic `for` loops: counting up and down, steps, nested loops, `if` inside loops |
+| `test/interpreter/test12.axo` | `for` loop scope (ends with an expected error) |
+| `test/interpreter/test13.axo` | `for` loops combined with functions, including `return` from inside a loop |
+
+`test/test_interpreter.py` also has unit tests for functions, scope, and `for` loops (including syntax and runtime errors).
 
 ## Interpreter
 
@@ -106,7 +220,8 @@ Axolotl values are stored as plain Python values: numbers are `int`/`float`, str
 Variables live in `SymbolTable` objects, each holding a `dict` from name to value plus a link to its `parent` table:
 
 - The program starts with one global table.
-- Every block (`{ ... }` of an `if`, `else` or `while` body) runs in a new child table, so variables declared inside a block disappear when it ends.
+- Every block (`{ ... }` of an `if`, `else`, `while` or `for` body) runs in a new child table, so variables declared inside a block disappear when it ends.
+- Every `for` loop gets a loop table around its body, holding the variable declared in its header.
 - Every function call gets a new table whose parent is the table the function was **defined** in, holding its parameters.
 
 Storing and retrieving:
@@ -135,7 +250,7 @@ Handled errors include:
 
 - **Undefined variables**: reading, assigning to, or calling a name that was never declared.
 - **Division by zero**: `/` or `%` by zero, and `0 ^` a negative number.
-- **Invalid operations**: operators on the wrong types (`"a" + 1`, `true * 2`, `1 < "2"`, `-"a"`), non-boolean `if`/`while` conditions, calling something that is not a function, wrong number of arguments, `return` outside a function, and recursion that is too deep.
+- **Invalid operations**: operators on the wrong types (`"a" + 1`, `true * 2`, `1 < "2"`, `-"a"`), non-boolean `if`/`while`/`for` conditions, calling something that is not a function, wrong number of arguments, `return` outside a function, and recursion that is too deep.
 
 ## Project Layout
 
@@ -143,7 +258,7 @@ Handled errors include:
   - `lexer.py` – lexical analyzer / tokenizer
 - `parser/`
   - `parser.py` – recursive descent parser
-  - `ast.py` – AST node definitions (`ProgramNode`, `VarDeclarationNode`, `BinOpNode`, etc.)
+  - `ast.py` – AST node definitions (`ProgramNode`, `VarDeclarationNode`, `ForNode`, `FuncDefNode`, `CallNode`, etc.)
 - `interpreter/`
   - `interpreter.py` – tree-walking interpreter, `SymbolTable` and `Context`
 - `errors` – custom error classes (`IllegalCharError`, `ExpectedCharError`, `InvalidSyntaxError`, `RTError`)

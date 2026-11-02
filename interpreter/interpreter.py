@@ -68,7 +68,7 @@ class Context:
 
 class Function:
     def __init__(self, name, param_names, body_node, closure):
-        self.name = name or '<anonymous>'
+        self.name = name
         self.param_names = param_names
         self.body_node = body_node
         self.closure = closure  # the symbol table the function was defined in
@@ -175,6 +175,19 @@ class Interpreter:
             self.visit(node.body_node, context)
         return None
 
+    def visit_ForNode(self, node, context):
+        # The loop gets its own scope, so variables declared in the
+        # initialization only exists while the loop runs
+        loop_context = context.new_scope()
+
+        self.visit(node.init_node, loop_context)
+        while self.condition(node.condition_node, loop_context, 'for'):
+            # Visit_BlockNode gives the body a new child scope each iteration, so variables declared inside the loop body do not leak outside
+            self.visit(node.body_node, loop_context)
+            # The increment runs in the same loop context, so it can modify loop variables
+            self.visit(node.increment_node, loop_context)
+        return None
+
     def condition(self, node, context, keyword):
         value = self.visit(node, context)
         if not isinstance(value, bool):
@@ -182,11 +195,10 @@ class Interpreter:
         return value
 
     def visit_FuncDefNode(self, node, context):
-        name = node.var_name_tok.value if node.var_name_tok else None
+        name = node.var_name_tok.value
         params = [tok.value for tok in node.params_name_toks]
         func = Function(name, params, node.body_node, context.symbol_table)
-        if name:
-            context.symbol_table.define(name, func)
+        context.symbol_table.define(name, func)
         return func
 
     def visit_ReturnNode(self, node, context):
