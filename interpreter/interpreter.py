@@ -3,6 +3,7 @@ import sys
 from lexer.lexer import *
 from errors.errors import RTError
 from parser.ast import *
+from interpreter.node_tracker import get_tracker
 
 ##########################################
 # SYMBOL TABLE (ENVIRONMENT)
@@ -10,7 +11,6 @@ from parser.ast import *
 
 class SymbolTable:
     """Maps variable names to their runtime values.
-
     Each scope (the program, a block, a function call) gets its own table,
     linked to the table of the scope that encloses it. Looking a name up
     walks outwards along these `parent` links until the name is found."""
@@ -120,6 +120,8 @@ class Interpreter:
         self.call_depth = 0
 
     def visit(self, node, context):
+        tracker = get_tracker()
+        tracker.track(node)
         method = getattr(self, f'visit_{type(node).__name__}', self.no_visit_method)
         return method(node, context)
 

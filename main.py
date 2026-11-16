@@ -5,6 +5,11 @@ import sys
 import interpreter.interpreter as interpreter
 import lexer.lexer as lexer
 import parser.parser as parser
+from parser.ast_debug import ast_to_tree, ast_inspect
+from interpreter.node_tracker import (
+    enable_tracking, disable_tracking, clear_tracking,
+    get_execution_path, get_execution_tree, get_summary, get_tracker
+)
 
 
 def run(fn, text, debug=False, context=None, show_result=False):
@@ -26,9 +31,11 @@ def run(fn, text, debug=False, context=None, show_result=False):
 
     if debug:
         print()
-        print('AST:')
+        print('AST (S-expression):')
         print(res.node)
         print()
+        print('AST (Tree view):')
+        print(ast_to_tree(res.node))
         print('Output:')
 
     value, error = interpreter.run(res.node, context)
@@ -122,10 +129,18 @@ def run_test_menu():
 
 
 def run_repl():
-    print("Welcome to Axolotl 1.0 (type 'exit' to quit, 'debug' to toggle tokens/AST)")
+    print("Welcome to Axolotl 1.0")
+    print("  'exit' to quit")
+    print("  'debug' to toggle tokens/AST display")
+    print("  'trace' to show execution flow of last command")
+    print("  'traced' to show AST with visited nodes marked")
+    print("  'tree' to show last AST as tree view")
+    print("  'inspect' to inspect last AST in detail")
+    print("  'test' to run tests")
     # one context for the whole session, so variables survive between lines
     context = interpreter.new_global_context()
     debug = False
+    last_ast = None
     while True:
         try:
             text = input('Axolotl > ')
@@ -142,10 +157,84 @@ def run_repl():
             debug = not debug
             print(f"debug {'on' if debug else 'off'}")
             continue
+        if text.strip().lower() == 'tree':
+            if last_ast:
+                print()
+                print(ast_to_tree(last_ast))
+            else:
+                print("No AST to display (run some code first)")
+            continue
+        if text.strip().lower() == 'inspect':
+            if last_ast:
+                print()
+                print(ast_inspect(last_ast, show_positions=True))
+            else:
+                print("No AST to display (run some code first)")
+            continue
+        if text.strip().lower() == 'trace':
+            print()
+            print("Execution flow:")
+            print(get_execution_tree())
+            print()
+            print(get_summary())
+            continue
+        if text.strip().lower() == 'traced':
+            if last_ast:
+                print()
+                tracker = get_tracker()
+                visited_ids = set(id(v) for v in [last_ast])  # Placeholder
+                print("AST with visited nodes marked (✓):")
+                print(ast_to_tree(last_ast))
+                print()
+                print("Execution flow:")
+                print(get_execution_tree())
+            else:
+                print("No AST to display (run some code first)")
+            continue
         if not text.strip():
             continue
 
-        run('<stdin>', text, debug, context, show_result=True)
+        tokens, error = lexer.run('<stdin>', text)
+        if error:
+            print(error.as_string())
+            continue
+
+        if debug:
+            print()
+            print('Tokens:')
+            print(tokens)
+
+        res = parser.Parser(tokens).parse()
+        if res.error:
+            print(res.error.as_string())
+            continue
+
+        last_ast = res.node
+
+        if debug:
+            print()
+            print('AST (S-expression):')
+            print(res.node)
+            print()
+            print('AST (Tree view):')
+            print(ast_to_tree(res.node))
+            print()
+            print('Output:')
+
+        clear_tracking()
+        enable_tracking()
+        
+        value, error = interpreter.run(res.node, context)
+        
+        disable_tracking()
+        
+        if error:
+            print(error.as_string())
+            continue
+
+        # In the REPL, echo the value of a bare expression like `1 + 2`
+        if value is not None and res.node.statements and not isinstance(res.node.statements[-1], parser.FuncDefNode):
+            print(interpreter.to_display(value))
 
 
 def main():
