@@ -1,5 +1,9 @@
 # Axolotl
 
+[![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![Language: Python](https://img.shields.io/badge/Language-Python-3776ab.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 A handwritten lexer, recursive-descent parser and tree-walking interpreter for the Axolotl language, following the grammar in [`docs/EBNF.txt`](docs/EBNF.txt). It turns source text into a stream of tokens, parses them into an Abstract Syntax Tree (AST), and then executes the AST, reporting detailed lexing, syntax or runtime errors (`errors`).
 
 ## Requirements
